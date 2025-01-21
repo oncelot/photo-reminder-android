@@ -104,7 +104,7 @@ fun scheduleDailyPhotoCheck(context: Context) {
 
 fun calculateInitialDelay(): Long {
     val calendar = Calendar.getInstance().apply {
-        set(Calendar.HOUR_OF_DAY, 9) // Imposta l'orario desiderato (ad esempio, 9:00)
+        set(Calendar.HOUR_OF_DAY, 15) // Imposta l'orario desiderato (ad esempio, 9:00)
         set(Calendar.MINUTE, 0)
         set(Calendar.SECOND, 0)
     }
