@@ -129,9 +129,8 @@ fun Greeting(contentResolver: ContentResolver) {
     RequestNotificationPermission{
 
         PermissionHandler(contentResolver) {
-            photos=getWhatsAppPhotos();
 
-            photos = getPhotosByDate(contentResolver, day, month)+ getWhatsAppPhotos();
+            photos = getPhotosByDate(contentResolver, day, month);
         }
     }
 
@@ -463,9 +462,8 @@ fun showNotification(context: Context, photoUri: String, title: String, message:
     }
 
     // Crea un PendingIntent per aprire la foto nell'app predefinita
-    val intent = Intent(Intent.ACTION_VIEW).apply {
-        data = Uri.parse(photoUri)
-        flags = Intent.FLAG_GRANT_READ_URI_PERMISSION
+    val intent = Intent(context, MainActivity::class.java).apply {
+        flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
     }
     val pendingIntent = PendingIntent.getActivity(context, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
 
