@@ -474,7 +474,7 @@ fun showNotification(context: Context, photoUri: String, title: String, message:
     val notification = NotificationCompat.Builder(context, channelId)
         .setContentTitle(title)
         .setContentText(message)
-        .setSmallIcon(R.drawable.ic_launcher_background) // Sostituisci con un'icona valida
+        .setSmallIcon(R.mipmap.ic_launcher) // Sostituisci con un'icona valida
         .setContentIntent(pendingIntent)
         .setAutoCancel(true)
         .setStyle(NotificationCompat.BigPictureStyle()
