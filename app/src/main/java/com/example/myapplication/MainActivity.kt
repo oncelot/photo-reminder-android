@@ -51,6 +51,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -164,7 +165,7 @@ fun Greeting(contentResolver: ContentResolver) {
             },
             modifier = Modifier.padding(bottom = 16.dp)
         ) {
-            Text("Seleziona Data")
+            Text("${stringResource(R.string.selectData)}")
 
         }
         //   Button(onClick = {photos = getPhotosByDate(contentResolver,day,month) }){ Text("Cerca foto") }
@@ -207,7 +208,7 @@ fun Greeting(contentResolver: ContentResolver) {
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Text(
-                            text = "Foto scattata il ${photos[selectedPhotoIndex!!].date}",
+                            text =   "${stringResource(R.string.TitleDettaglioFoto)} ${photos[selectedPhotoIndex!!].date}",
                             style = MaterialTheme.typography.bodyLarge,
                             color = Color.White,
                             modifier = Modifier.padding(8.dp)
@@ -244,7 +245,7 @@ fun Greeting(contentResolver: ContentResolver) {
                                 }
                                 context.startActivity(intent)
                             }) {
-                                Text("Apri")
+                                Text("${stringResource(R.string.apri)}")
                             }
                             Button(
                                 onClick = {
@@ -347,10 +348,10 @@ fun PermissionHandler(contentResolver: ContentResolver, onPermissionGranted: () 
                 verticalArrangement = Arrangement.Center,
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Text("Per accedere alle foto, l'app necessita del tuo permesso.")
+                Text("${stringResource(R.string.accessoFoto)}")
                 Spacer(modifier = Modifier.height(16.dp))
                 Button(onClick = { permissionState.launchPermissionRequest() }) {
-                    Text("Concedi il permesso")
+                    Text("${stringResource(R.string.concediPermesso)}")
                 }
             }
         }
@@ -361,7 +362,7 @@ fun PermissionHandler(contentResolver: ContentResolver, onPermissionGranted: () 
                 verticalArrangement = Arrangement.Center,
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Text("Il permesso è necessario per accedere alle foto. Concedilo dalle impostazioni.")
+                Text("${stringResource(R.string.permessoNegato)}")
                 Spacer(modifier = Modifier.height(16.dp))
                 Button(onClick = {
                     val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
@@ -369,7 +370,7 @@ fun PermissionHandler(contentResolver: ContentResolver, onPermissionGranted: () 
                     }
                     context.startActivity(intent)
                 }) {
-                    Text("Vai alle impostazioni")
+                    Text("${stringResource(R.string.vaiImpostazioni)}")
                 }
             }
         }
@@ -413,12 +414,12 @@ fun RequestNotificationPermission(onPermissionGranted: @Composable () -> Unit) {
                 verticalArrangement = Arrangement.Center,
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Text("L'app necessita del permesso per inviare notifiche.")
+                Text("${stringResource(R.string.concediPermessoNotifiche)}")
                 Spacer(modifier = Modifier.height(16.dp))
                 Button(onClick = {
                     notificationPermissionState.launchPermissionRequest()
                 }) {
-                    Text("Concedi il permesso")
+                    Text("${stringResource(R.string.concediPermesso)}")
                 }
             }
         }
@@ -429,7 +430,7 @@ fun RequestNotificationPermission(onPermissionGranted: @Composable () -> Unit) {
                 verticalArrangement = Arrangement.Center,
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Text("Il permesso per inviare notifiche è stato negato. Concedilo dalle impostazioni.")
+                Text("${stringResource(R.string.concediPermessoNotificheNegato)}")
                 Spacer(modifier = Modifier.height(16.dp))
                 Button(onClick = {
                     val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
@@ -437,7 +438,7 @@ fun RequestNotificationPermission(onPermissionGranted: @Composable () -> Unit) {
                     }
                     context.startActivity(intent)
                 }) {
-                    Text("Vai alle impostazioni")
+                    Text("${stringResource(R.string.vaiImpostazioni)}")
                 }
             }
         }
@@ -474,7 +475,7 @@ fun showNotification(context: Context, photoUri: String, title: String, message:
     val notification = NotificationCompat.Builder(context, channelId)
         .setContentTitle(title)
         .setContentText(message)
-        .setSmallIcon(R.mipmap.ic_launcher) // Sostituisci con un'icona valida
+        .setSmallIcon(R.drawable.ic_stat_name) // Sostituisci con un'icona valida
         .setContentIntent(pendingIntent)
         .setAutoCancel(true)
         .setStyle(NotificationCompat.BigPictureStyle()

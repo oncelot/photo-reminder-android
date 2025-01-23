@@ -1,3 +1,13 @@
 <resources>
     <string name="app_name">SnapBack</string>
+    <string name="TitleDettaglioFoto" translatable="true">Photo taken on</string>
+    <string name="apri" translatable="true">Open</string>
+    <string name="selectData" translatable="true">Select Date</string>
+    <string name="accessoFoto" translatable="true">To access your photos, the app needs your permission.</string>
+    <string name="concediPermesso" translatable="true">Grant permission</string>
+    <string name="permessoNegato" translatable="true">Permission is required to access photos. Grant it in settings.</string>
+    <string name="vaiImpostazioni" translatable="true">Go to settings</string>
+    <string name="concediPermessoNotifiche" translatable="true">The app needs permission to send notifications.</string>
+    <string name="concediPermessoNotificheNegato" translatable="true">Permission to send notifications has been denied. Please grant it in settings.</string>
+
 </resources>

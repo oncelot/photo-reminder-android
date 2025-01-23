@@ -1,0 +1,13 @@
+<resources>
+    <string name="app_name">Foto Ricordi</string>
+    <string name="TitleDettaglioFoto" translatable="true">Foto scattata il</string>
+    <string name="apri" translatable="true">Apri</string>
+    <string name="selectData" translatable="true">Seleziona Data</string>
+    <string name="accessoFoto" translatable="true">Per accedere alle foto, l\'app necessita del tuo permesso.</string>
+    <string name="concediPermesso" translatable="true">Concedi il permesso</string>
+    <string name="permessoNegato" translatable="true">Il permesso è necessario per accedere alle foto. Concedilo dalle impostazioni.</string>
+    <string name="vaiImpostazioni" translatable="true">Vai alle impostazioni</string>
+    <string name="concediPermessoNotifiche" translatable="true">L\'app necessita del permesso per inviare notifiche.</string>
+    <string name="concediPermessoNotificheNegato" translatable="true">Il permesso per inviare notifiche è stato negato. Concedilo dalle impostazioni.</string>
+
+</resources>
