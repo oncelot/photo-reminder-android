@@ -9,5 +9,7 @@
     <string name="vaiImpostazioni" translatable="true">Vai alle impostazioni</string>
     <string name="concediPermessoNotifiche" translatable="true">L\'app necessita del permesso per inviare notifiche.</string>
     <string name="concediPermessoNotificheNegato" translatable="true">Il permesso per inviare notifiche è stato negato. Concedilo dalle impostazioni.</string>
+    <string name="titleNotifica" translatable="true">Foto del giorno</string>
+    <string name="descriptionNotifica" translatable="true">Notifiche giornaliere con le foto scattate in questa data negli anni passati.</string>
 
 </resources>

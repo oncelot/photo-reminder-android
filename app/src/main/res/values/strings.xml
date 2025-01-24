@@ -9,5 +9,6 @@
     <string name="vaiImpostazioni" translatable="true">Go to settings</string>
     <string name="concediPermessoNotifiche" translatable="true">The app needs permission to send notifications.</string>
     <string name="concediPermessoNotificheNegato" translatable="true">Permission to send notifications has been denied. Please grant it in settings.</string>
-
+    <string name="titleNotifica" translatable="true">Photo of the day</string>
+    <string name="descriptionNotifica" translatable="true">Daily notifications with photos taken on this date in past years.</string>
 </resources>

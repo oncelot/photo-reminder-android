@@ -447,6 +447,7 @@ fun RequestNotificationPermission(onPermissionGranted: @Composable () -> Unit) {
 
 
 fun showNotification(context: Context, photoUri: String, title: String, message: String) {
+
     val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
     val channelId = "daily_photos_channel"
 
@@ -454,10 +455,10 @@ fun showNotification(context: Context, photoUri: String, title: String, message:
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
         val channel = NotificationChannel(
             channelId,
-            "Foto del giorno",
+            "Photo of the day",
             NotificationManager.IMPORTANCE_HIGH
         ).apply {
-            description = "Notifiche giornaliere con le foto scattate in questa data negli anni passati."
+            description = "Daily notifications with photos taken on this date in past years."
         }
         notificationManager.createNotificationChannel(channel)
     }
