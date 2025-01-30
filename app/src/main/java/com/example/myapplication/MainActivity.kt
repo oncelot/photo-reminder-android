@@ -36,6 +36,7 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -57,6 +58,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.core.app.NotificationCompat
+import androidx.media3.common.util.Log
 import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
@@ -127,12 +129,13 @@ fun Greeting(contentResolver: ContentResolver) {
     var day by remember { mutableStateOf(today.dayOfMonth) }
     var month by remember { mutableStateOf(today.monthValue) }
     var photos by remember { mutableStateOf(listOf<PhotoData>()) }
+    PermissionHandler(contentResolver) {
+
+        photos = getPhotosByDate(contentResolver, day, month);
+    }
     RequestNotificationPermission{
 
-        PermissionHandler(contentResolver) {
 
-            photos = getPhotosByDate(contentResolver, day, month);
-        }
     }
 
     val context = LocalContext.current
@@ -357,21 +360,31 @@ fun PermissionHandler(contentResolver: ContentResolver, onPermissionGranted: () 
         }
         else -> {
             // Caso in cui il permesso è stato negato definitivamente
-            Column(
-                modifier = Modifier.fillMaxSize(),
-                verticalArrangement = Arrangement.Center,
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Text("${stringResource(R.string.permessoNegato)}")
-                Spacer(modifier = Modifier.height(16.dp))
-                Button(onClick = {
-                    val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
-                        data = Uri.fromParts("package", context.packageName, null)
+            var showDialog by remember { mutableStateOf(true) } // Controlla se mostrare il popup
+
+            if (showDialog) {
+
+                AlertDialog(
+                    onDismissRequest = { showDialog = false },
+                    title = { Text(stringResource(R.string.permessoNegato)) },
+                    text = { Text(stringResource(R.string.vaiImpostazioniDescrizione)) },
+                    confirmButton = {
+                        Button(onClick = {
+                            showDialog = false
+                            val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                                data = Uri.fromParts("package", context.packageName, null)
+                            }
+                            context.startActivity(intent)
+                        }) {
+                            Text(stringResource(R.string.vaiImpostazioni))
+                        }
+                    },
+                    dismissButton = {
+                        Button(onClick = { showDialog = false }) {
+                            Text(stringResource(R.string.annulla))
+                        }
                     }
-                    context.startActivity(intent)
-                }) {
-                    Text("${stringResource(R.string.vaiImpostazioni)}")
-                }
+                )
             }
         }
     }
@@ -417,6 +430,7 @@ fun RequestNotificationPermission(onPermissionGranted: @Composable () -> Unit) {
                 Text("${stringResource(R.string.concediPermessoNotifiche)}")
                 Spacer(modifier = Modifier.height(16.dp))
                 Button(onClick = {
+
                     notificationPermissionState.launchPermissionRequest()
                 }) {
                     Text("${stringResource(R.string.concediPermesso)}")
@@ -425,22 +439,32 @@ fun RequestNotificationPermission(onPermissionGranted: @Composable () -> Unit) {
         }
         else -> {
             // Se il permesso è negato definitivamente
-            Column(
-                modifier = Modifier.fillMaxSize(),
-                verticalArrangement = Arrangement.Center,
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Text("${stringResource(R.string.concediPermessoNotificheNegato)}")
-                Spacer(modifier = Modifier.height(16.dp))
-                Button(onClick = {
-                    val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
-                        data = Uri.fromParts("package", context.packageName, null)
+            var showDialog by remember { mutableStateOf(true) } // Controlla se mostrare il popup
+
+            if (showDialog) {
+
+            AlertDialog(
+                onDismissRequest = { showDialog = false },
+                title = { Text(stringResource(R.string.concediPermessoNotificheNegato)) },
+                text = { Text(stringResource(R.string.vaiImpostazioniDescrizione)) },
+                confirmButton = {
+                    Button(onClick = {
+                        showDialog = false
+                        val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                            data = Uri.fromParts("package", context.packageName, null)
+                        }
+                        context.startActivity(intent)
+                    }) {
+                        Text(stringResource(R.string.vaiImpostazioni))
                     }
-                    context.startActivity(intent)
-                }) {
-                    Text("${stringResource(R.string.vaiImpostazioni)}")
+                },
+                dismissButton = {
+                    Button(onClick = { showDialog = false }) {
+                        Text(stringResource(R.string.annulla))
+                    }
                 }
-            }
+            )
+        }
         }
     }
 }
