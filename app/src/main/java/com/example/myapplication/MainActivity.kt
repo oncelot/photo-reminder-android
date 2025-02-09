@@ -9,10 +9,14 @@ import android.content.ContentUris
 import android.content.Context
 import android.content.Intent
 import android.database.Cursor
+import android.media.ExifInterface
+import android.media.MediaScannerConnection
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.os.Environment
+import android.os.storage.StorageManager
+import android.os.storage.StorageVolume
 import android.provider.MediaStore
 import android.provider.Settings
 import androidx.activity.ComponentActivity
@@ -59,6 +63,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.core.app.NotificationCompat
 import androidx.media3.common.util.Log
+import androidx.media3.common.util.UnstableApi
 import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
@@ -69,6 +74,9 @@ import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
 import com.google.accompanist.permissions.shouldShowRationale
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import java.io.File
 import java.text.SimpleDateFormat
 import java.time.LocalDate
@@ -77,16 +85,44 @@ import java.util.Date
 import java.util.Locale
 import java.util.concurrent.TimeUnit
 
+
+import kotlinx.coroutines.withContext
+
+import java.util.*
+
+
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+
+        // Controlla se la scansione è necessaria
+        //val externalpath = File(Environment.getExternalStorageDirectory(),  Environment.MEDIA_MOUNTED )
+        val storageManager = this.getSystemService(Context.STORAGE_SERVICE) as StorageManager
+        val storageVolumes: List<StorageVolume> = storageManager.storageVolumes
+        var externalpath="";
+        for (volume in storageVolumes) {
+            val path = volume.directory?.absolutePath
+            if (path != null && !path.contains("emulated")) {
+                externalpath = path // Questo è il percorso della microSD
+            }
+        }
+            val file = File(externalpath);
+        val path = File(Environment.getExternalStorageDirectory(),
+            Environment.MEDIA_MOUNTED )
+
+        //if (shouldScanMedia(this)) {
+            scanMediaAsync(
+                this,
+                listOf(externalpath+"/DCIM/Camera/IMG_20181013_092126.jpg", externalpath+"/Pictures")
+            )
+      //  }
         scheduleDailyPhotoCheck(this)
         //requestPermissions(arrayOf(Manifest.permission.), 100)
         enableEdgeToEdge()
         setContent {
             MyApplicationTheme {
-
-                    Greeting(contentResolver)
+                Greeting(contentResolver)
                 }
             }
         }
@@ -125,13 +161,14 @@ fun calculateInitialDelay(): Long {
 @Composable
 fun Greeting(contentResolver: ContentResolver) {
 
+    val service= Service();
     val today = LocalDate.now()
     var day by remember { mutableStateOf(today.dayOfMonth) }
     var month by remember { mutableStateOf(today.monthValue) }
     var photos by remember { mutableStateOf(listOf<PhotoData>()) }
     PermissionHandler(contentResolver) {
 
-        photos = getPhotosByDate(contentResolver, day, month);
+        photos = service.getPhotosByDate(contentResolver, day, month);
     }
     RequestNotificationPermission{
 
@@ -269,245 +306,208 @@ fun Greeting(contentResolver: ContentResolver) {
 }
 
 
-fun getPhotosByDate(contentResolver: ContentResolver, day: Int, month: Int): List<PhotoData> {
-    val photos = mutableListOf<PhotoData>()
-    val uriList = listOf(
-        MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
-        MediaStore.Images.Media.INTERNAL_CONTENT_URI
-    )
 
-    val selection = "strftime('%d', datetime(${MediaStore.Images.Media.DATE_TAKEN} / 1000, 'unixepoch')) = ? AND " +
-            "strftime('%m', datetime(${MediaStore.Images.Media.DATE_TAKEN} / 1000, 'unixepoch')) = ?"
-    val selectionArgs = arrayOf(
-        String.format("%02d", day),
-        String.format("%02d", month)
-    )
 
-    val queryUri = MediaStore.Images.Media.EXTERNAL_CONTENT_URI
 
-    val projection = arrayOf(MediaStore.Images.Media._ID, MediaStore.Images.Media.DATE_TAKEN)
-    val sortOrder = "${MediaStore.Images.Media.DATE_TAKEN} DESC"
-    val dateFormatter = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
-
-//contentResolver.query(queryUri,projection,selection,selectionArgs,sortOrder).use { cursor -> }
-
-       /* for (uri in uriList) {*/
-        val cursor: Cursor? = contentResolver.query(queryUri, projection, null, null, sortOrder)
-
-        cursor?.use {
-            val dateColumn = it.getColumnIndexOrThrow(MediaStore.Images.Media.DATE_TAKEN)
-            val idColumn = it.getColumnIndexOrThrow(MediaStore.Images.Media._ID)
-
-            while (it.moveToNext()) {
-                val dateTaken = it.getLong(dateColumn)
-                val id = it.getLong(idColumn)
-
-                val calendar = java.util.Calendar.getInstance().apply { timeInMillis = dateTaken }
-                if (calendar.get(java.util.Calendar.DAY_OF_MONTH) == day &&
-                    calendar.get(java.util.Calendar.MONTH) + 1 == month
-                ) {
-                    val formattedDate = dateFormatter.format(Date(dateTaken))
-                    val photoUri = MediaStore.Images.Media.EXTERNAL_CONTENT_URI.buildUpon()
-                        .appendPath(id.toString()).build().toString()
-
-                    photos.add(PhotoData(uri = photoUri, date = formattedDate))
-
-                }
-            }
-        }
-
-       /* }*/
-    return photos
-}
-
+/**
+ * Cerca in modo ricorsivo tutti i file immagine in una determinata directory e filtra quelli
+ * che, in base ai metadati EXIF, sono stati scattati in un certo giorno e mese.
+ *
+ * @param context Il contesto per eventuali operazioni.
+ * @param directory La directory (ad esempio la cartella della microSD) da scansionare.
+ * @param targetDay Il giorno desiderato (es. 16).
+ * @param targetMonth Il mese desiderato (es. 1 per gennaio).
+ * @return Una lista di file che corrispondono al criterio.
+ */
 @OptIn(ExperimentalPermissionsApi::class)
 @Composable
 fun PermissionHandler(contentResolver: ContentResolver, onPermissionGranted: () -> Unit) {
-    val context = LocalContext.current
-    val permissionState = rememberPermissionState(
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            android.Manifest.permission.READ_MEDIA_IMAGES
-        } else {
-            android.Manifest.permission.READ_EXTERNAL_STORAGE
-        }
-    )
+val context = LocalContext.current
+val permissionState = rememberPermissionState(
+  if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+      android.Manifest.permission.READ_MEDIA_IMAGES
+  } else {
+      android.Manifest.permission.READ_EXTERNAL_STORAGE
+  }
+)
 
-    // Gestire il permesso
-    LaunchedEffect(key1 = Unit) {
-        if (!permissionState.status.isGranted) {
-            permissionState.launchPermissionRequest()
-        }
-    }
-
-    when {
-        permissionState.status.isGranted -> {
-            // Se il permesso è concesso, esegui l'azione
-            onPermissionGranted()
-        }
-        permissionState.status.shouldShowRationale -> {
-            // Mostra un messaggio personalizzato per spiegare perché è necessario
-            Column(
-                modifier = Modifier.fillMaxSize(),
-                verticalArrangement = Arrangement.Center,
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Text("${stringResource(R.string.accessoFoto)}")
-                Spacer(modifier = Modifier.height(16.dp))
-                Button(onClick = { permissionState.launchPermissionRequest() }) {
-                    Text("${stringResource(R.string.concediPermesso)}")
-                }
-            }
-        }
-        else -> {
-            // Caso in cui il permesso è stato negato definitivamente
-            var showDialog by remember { mutableStateOf(true) } // Controlla se mostrare il popup
-
-            if (showDialog) {
-
-                AlertDialog(
-                    onDismissRequest = { showDialog = false },
-                    title = { Text(stringResource(R.string.permessoNegato)) },
-                    text = { Text(stringResource(R.string.vaiImpostazioniDescrizione)) },
-                    confirmButton = {
-                        Button(onClick = {
-                            showDialog = false
-                            val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
-                                data = Uri.fromParts("package", context.packageName, null)
-                            }
-                            context.startActivity(intent)
-                        }) {
-                            Text(stringResource(R.string.vaiImpostazioni))
-                        }
-                    },
-                    dismissButton = {
-                        Button(onClick = { showDialog = false }) {
-                            Text(stringResource(R.string.annulla))
-                        }
-                    }
-                )
-            }
-        }
-    }
+// Gestire il permesso
+LaunchedEffect(key1 = Unit) {
+  if (!permissionState.status.isGranted) {
+      permissionState.launchPermissionRequest()
+  }
 }
 
-fun getWhatsAppPhotos(): List<PhotoData> {
-    val photos = mutableListOf<PhotoData>()
-    val whatsAppFolder = File(Environment.getExternalStorageDirectory(), "Android/media/com.whatsapp/WhatsApp/Media/WhatsApp Images")
-   // val whatsAppFolder2 = File(Environment.getExternalStorageDirectory(), "WhatsApp/Media/WhatsApp Images")
-    whatsAppFolder.listFiles()?.forEach { file ->
-        if (file.extension.lowercase() in listOf("jpg", "jpeg", "png")) {
-            photos.add(PhotoData(file.toURI().toString(), file.lastModified().toString()))
-        }
-    }
-    return photos
+when {
+  permissionState.status.isGranted -> {
+      // Se il permesso è concesso, esegui l'azione
+      onPermissionGranted()
+  }
+  permissionState.status.shouldShowRationale -> {
+      // Mostra un messaggio personalizzato per spiegare perché è necessario
+      Column(
+          modifier = Modifier.fillMaxSize(),
+          verticalArrangement = Arrangement.Center,
+          horizontalAlignment = Alignment.CenterHorizontally
+      ) {
+          Text("${stringResource(R.string.accessoFoto)}")
+          Spacer(modifier = Modifier.height(16.dp))
+          Button(onClick = { permissionState.launchPermissionRequest() }) {
+              Text("${stringResource(R.string.concediPermesso)}")
+          }
+      }
+  }
+  else -> {
+      // Caso in cui il permesso è stato negato definitivamente
+      var showDialog by remember { mutableStateOf(true) } // Controlla se mostrare il popup
+
+      if (showDialog) {
+
+          AlertDialog(
+              onDismissRequest = { showDialog = false },
+              title = { Text(stringResource(R.string.permessoNegato)) },
+              text = { Text(stringResource(R.string.vaiImpostazioniDescrizione)) },
+              confirmButton = {
+                  Button(onClick = {
+                      showDialog = false
+                      val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                          data = Uri.fromParts("package", context.packageName, null)
+                      }
+                      context.startActivity(intent)
+                  }) {
+                      Text(stringResource(R.string.vaiImpostazioni))
+                  }
+              },
+              dismissButton = {
+                  Button(onClick = { showDialog = false }) {
+                      Text(stringResource(R.string.annulla))
+                  }
+              }
+          )
+      }
+  }
+}
 }
 
 
 @OptIn(ExperimentalPermissionsApi::class)
 @Composable
 fun RequestNotificationPermission(onPermissionGranted: @Composable () -> Unit) {
-    val context = LocalContext.current
-    val notificationPermissionState = rememberPermissionState(
-        permission = android.Manifest.permission.POST_NOTIFICATIONS
-    )
+val context = LocalContext.current
+val notificationPermissionState = rememberPermissionState(
+  permission = android.Manifest.permission.POST_NOTIFICATIONS
+)
 
-    LaunchedEffect(Unit) {
-        if (!notificationPermissionState.status.isGranted) {
-            notificationPermissionState.launchPermissionRequest()
-        }
-    }
+LaunchedEffect(Unit) {
+  if (!notificationPermissionState.status.isGranted) {
+      notificationPermissionState.launchPermissionRequest()
+  }
+}
 
-    when {
-        notificationPermissionState.status.isGranted -> {
-            onPermissionGranted()
-        }
-        notificationPermissionState.status.shouldShowRationale -> {
-            Column(
-                modifier = Modifier.fillMaxSize(),
-                verticalArrangement = Arrangement.Center,
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Text("${stringResource(R.string.concediPermessoNotifiche)}")
-                Spacer(modifier = Modifier.height(16.dp))
-                Button(onClick = {
+when {
+  notificationPermissionState.status.isGranted -> {
+      onPermissionGranted()
+  }
+  notificationPermissionState.status.shouldShowRationale -> {
+      Column(
+          modifier = Modifier.fillMaxSize(),
+          verticalArrangement = Arrangement.Center,
+          horizontalAlignment = Alignment.CenterHorizontally
+      ) {
+          Text("${stringResource(R.string.concediPermessoNotifiche)}")
+          Spacer(modifier = Modifier.height(16.dp))
+          Button(onClick = {
 
-                    notificationPermissionState.launchPermissionRequest()
-                }) {
-                    Text("${stringResource(R.string.concediPermesso)}")
-                }
-            }
-        }
-        else -> {
-            // Se il permesso è negato definitivamente
-            var showDialog by remember { mutableStateOf(true) } // Controlla se mostrare il popup
+              notificationPermissionState.launchPermissionRequest()
+          }) {
+              Text("${stringResource(R.string.concediPermesso)}")
+          }
+      }
+  }
+  else -> {
+      // Se il permesso è negato definitivamente
+      var showDialog by remember { mutableStateOf(true) } // Controlla se mostrare il popup
 
-            if (showDialog) {
+      if (showDialog) {
 
-            AlertDialog(
-                onDismissRequest = { showDialog = false },
-                title = { Text(stringResource(R.string.concediPermessoNotificheNegato)) },
-                text = { Text(stringResource(R.string.vaiImpostazioniDescrizione)) },
-                confirmButton = {
-                    Button(onClick = {
-                        showDialog = false
-                        val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
-                            data = Uri.fromParts("package", context.packageName, null)
-                        }
-                        context.startActivity(intent)
-                    }) {
-                        Text(stringResource(R.string.vaiImpostazioni))
-                    }
-                },
-                dismissButton = {
-                    Button(onClick = { showDialog = false }) {
-                        Text(stringResource(R.string.annulla))
-                    }
-                }
-            )
-        }
-        }
-    }
+      AlertDialog(
+          onDismissRequest = { showDialog = false },
+          title = { Text(stringResource(R.string.concediPermessoNotificheNegato)) },
+          text = { Text(stringResource(R.string.vaiImpostazioniDescrizione)) },
+          confirmButton = {
+              Button(onClick = {
+                  showDialog = false
+                  val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                      data = Uri.fromParts("package", context.packageName, null)
+                  }
+                  context.startActivity(intent)
+              }) {
+                  Text(stringResource(R.string.vaiImpostazioni))
+              }
+          },
+          dismissButton = {
+              Button(onClick = { showDialog = false }) {
+                  Text(stringResource(R.string.annulla))
+              }
+          }
+      )
+  }
+  }
+}
 }
 
 
 fun showNotification(context: Context, photoUri: String, title: String, message: String) {
 
-    val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-    val channelId = "daily_photos_channel"
+val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+val channelId = "daily_photos_channel"
 
-    // Crea un canale di notifica (necessario per Android 8+)
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-        val channel = NotificationChannel(
-            channelId,
-            "Photo of the day",
-            NotificationManager.IMPORTANCE_HIGH
-        ).apply {
-            description = "Daily notifications with photos taken on this date in past years."
-        }
-        notificationManager.createNotificationChannel(channel)
-    }
-
-    // Crea un PendingIntent per aprire la foto nell'app predefinita
-    val intent = Intent(context, MainActivity::class.java).apply {
-        flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-    }
-    val pendingIntent = PendingIntent.getActivity(context, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
-
-    // Carica l'immagine per la notifica
-    val bitmap = MediaStore.Images.Media.getBitmap(context.contentResolver, Uri.parse(photoUri))
-
-    // Crea la notifica
-    val notification = NotificationCompat.Builder(context, channelId)
-        .setContentTitle(title)
-        .setContentText(message)
-        .setSmallIcon(R.drawable.ic_stat_name) // Sostituisci con un'icona valida
-        .setContentIntent(pendingIntent)
-        .setAutoCancel(true)
-        .setStyle(NotificationCompat.BigPictureStyle()
-            .bigPicture(bitmap)
-            )
-        .build()
-
-    notificationManager.notify(1, notification)
+// Crea un canale di notifica (necessario per Android 8+)
+if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+  val channel = NotificationChannel(
+      channelId,
+      "Photo of the day",
+      NotificationManager.IMPORTANCE_HIGH
+  ).apply {
+      description = "Daily notifications with photos taken on this date in past years."
+  }
+  notificationManager.createNotificationChannel(channel)
 }
+
+// Crea un PendingIntent per aprire la foto nell'app predefinita
+val intent = Intent(context, MainActivity::class.java).apply {
+  flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+}
+val pendingIntent = PendingIntent.getActivity(context, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
+
+// Carica l'immagine per la notifica
+val bitmap = MediaStore.Images.Media.getBitmap(context.contentResolver, Uri.parse(photoUri))
+
+// Crea la notifica
+val notification = NotificationCompat.Builder(context, channelId)
+  .setContentTitle(title)
+  .setContentText(message)
+  .setSmallIcon(R.drawable.ic_stat_name) // Sostituisci con un'icona valida
+  .setContentIntent(pendingIntent)
+  .setAutoCancel(true)
+  .setStyle(NotificationCompat.BigPictureStyle()
+      .bigPicture(bitmap)
+      )
+  .build()
+
+notificationManager.notify(1, notification)
+}
+
+
+@androidx.annotation.OptIn(UnstableApi::class)
+fun scanMediaAsync(context: Context, paths: List<String>) {
+
+  MediaScannerConnection.scanFile(
+      context, paths.toTypedArray(), null ) {
+                                                      path, uri -> Log.d("MediaScanner", "Scansione completata: $path -> $uri")
+      }
+
+
+}
+
 
