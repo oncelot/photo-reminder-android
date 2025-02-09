@@ -97,6 +97,8 @@ class MainActivity : ComponentActivity() {
         val service = Service();
 
 
+
+
         // Controlla se la scansione è necessaria
         //val externalpath = File(Environment.getExternalStorageDirectory(),  Environment.MEDIA_MOUNTED )
 
@@ -149,14 +151,31 @@ fun Greeting(contentResolver: ContentResolver) {
     var day by remember { mutableStateOf(today.dayOfMonth) }
     var month by remember { mutableStateOf(today.monthValue) }
     var photos by remember { mutableStateOf(listOf<PhotoData>()) }
-    PermissionHandler(contentResolver) {
+    val serviceDialog = ServiceDialog();
 
-        photos = service.getPhotosByDate(contentResolver, day, month);
+    var isDialogClosed by remember { mutableStateOf(false) }
+
+    if (!isDialogClosed) {
+        // Mostra il dialogo
+        serviceDialog.DialogPreNotifiche(LocalContext.current) {
+            // Quando il dialogo viene chiuso, aggiorniamo lo stato
+            isDialogClosed = true
+        }
+    } else {
+        // Dopo la chiusura del dialogo, richiedi i permessi
+        PermissionHandler(contentResolver) {
+            RequestNotificationPermission {
+                // Permessi delle notifiche gestiti qui
+
+            }
+            // Dopo aver ottenuto il permesso, carica le foto
+            photos = service.getPhotosByDate(contentResolver, day, month)
+        }
+
+
+
     }
-    RequestNotificationPermission{
 
-
-    }
     val context = LocalContext.current
 
 
@@ -329,7 +348,7 @@ fun Greeting(contentResolver: ContentResolver) {
  */
 @OptIn(ExperimentalPermissionsApi::class)
 @Composable
-fun PermissionHandler(contentResolver: ContentResolver, onPermissionGranted: () -> Unit) {
+fun PermissionHandler(contentResolver: ContentResolver, onPermissionGranted: @Composable () -> Unit) {
 val context = LocalContext.current
 val permissionState = rememberPermissionState(
   if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {

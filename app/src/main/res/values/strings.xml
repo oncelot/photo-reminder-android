@@ -13,5 +13,9 @@
     <string name="descriptionNotifica" translatable="true">Daily notifications with photos taken on this date in past years.</string>
     <string name="annulla" translatable="true">Canceled</string>
     <string name="vaiImpostazioniDescrizione" translatable="true">Go Settings</string>
+    <string name="textPrenotifice" translatable="true">To give you the best experience, the app will ask for permission to access your photos so you can relive your memories, and to send you a daily notification with a photo to rediscover. <b>We recommend accepting them to enjoy these features!</b></string>
+    <string name="okclose" translatable="true">Close</string>
+    <string name="attenzione" translatable="true">Attention</string>
+
 
 </resources>

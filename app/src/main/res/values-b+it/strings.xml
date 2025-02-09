@@ -12,6 +12,9 @@
     <string name="titleNotifica" translatable="true">Foto del giorno</string>
     <string name="descriptionNotifica" translatable="true">Notifiche giornaliere con le foto scattate in questa data negli anni passati.</string>
     <string name="annulla" translatable="true">Annulla</string>
+    <string name="okclose" translatable="true">Chiudi</string>
     <string name="vaiImpostazioniDescrizione" translatable="true">VAI impostazioni</string>
+    <string name="textPrenotifice" translatable="true">Per offrirti la migliore esperienza, l\'app chiederà il permesso di accedere alle tue foto per farti rivivere i ricordi e di inviarti notifiche, una volta al giorno, per suggerirti le immagini da riscoprire. <b>Ti invitiamo ad accettarli per non perdere queste funzionalità!</b> </string>
+    <string name="attenzione" translatable="true">Attenzione</string>
 
 </resources>
