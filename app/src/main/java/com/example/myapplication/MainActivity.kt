@@ -94,29 +94,12 @@ import java.util.*
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        val service = Service();
 
 
         // Controlla se la scansione è necessaria
         //val externalpath = File(Environment.getExternalStorageDirectory(),  Environment.MEDIA_MOUNTED )
-        val storageManager = this.getSystemService(Context.STORAGE_SERVICE) as StorageManager
-        val storageVolumes: List<StorageVolume> = storageManager.storageVolumes
-        var externalpath="";
-        for (volume in storageVolumes) {
-            val path = volume.directory?.absolutePath
-            if (path != null && !path.contains("emulated")) {
-                externalpath = path // Questo è il percorso della microSD
-            }
-        }
-            val file = File(externalpath);
-        val path = File(Environment.getExternalStorageDirectory(),
-            Environment.MEDIA_MOUNTED )
 
-        //if (shouldScanMedia(this)) {
-            scanMediaAsync(
-                this,
-                listOf(externalpath+"/DCIM/Camera/IMG_20181013_092126.jpg", externalpath+"/Pictures")
-            )
-      //  }
         scheduleDailyPhotoCheck(this)
         //requestPermissions(arrayOf(Manifest.permission.), 100)
         enableEdgeToEdge()
@@ -174,8 +157,33 @@ fun Greeting(contentResolver: ContentResolver) {
 
 
     }
-
     val context = LocalContext.current
+
+
+
+    val storageManager = context.getSystemService(Context.STORAGE_SERVICE) as StorageManager
+    var externalpath=service.getexternalPath(storageManager);
+    val file = File(externalpath);
+    val path = File(Environment.getExternalStorageDirectory(),
+        Environment.MEDIA_MOUNTED )
+
+    /*
+    val uri: Uri = Uri.parse(externalpath+"/DCIM/Camera/IMG_20181013_092126.jpg")
+    service.getExifDate(contentResolver, uri);
+
+   if (service.shouldScanMedia(context)) {
+            scanMediaAsync(
+                context,
+                listOf(externalpath+"/DCIM/Camera/DSC01068.JPG", externalpath+"/Pictures")
+            )
+       }
+    val uri: Uri = Uri.parse(externalpath+"/DCIM/Camera/DSC01068.JPG")
+   var id= service.getImageIdFromPath(contentResolver,externalpath+"/DCIM/Camera/DSC01068.JPG")
+    var dataExif=   service.getExifDate(contentResolver,  MediaStore.Images.Media.EXTERNAL_CONTENT_URI.buildUpon().appendPath(id.toString()).build())
+    */
+
+
+
     var selectedPhotoIndex by remember { mutableStateOf<Int?>(null) } // Indice della foto selezionata
 
 
@@ -503,10 +511,9 @@ notificationManager.notify(1, notification)
 fun scanMediaAsync(context: Context, paths: List<String>) {
 
   MediaScannerConnection.scanFile(
-      context, paths.toTypedArray(), null ) {
-                                                      path, uri -> Log.d("MediaScanner", "Scansione completata: $path -> $uri")
-      }
-
+      context, paths.toTypedArray(), null)
+       {
+                                                        path, uri -> Log.d("MediaScanner", "Scansione completata: $path -> $uri")}
 
 }
 

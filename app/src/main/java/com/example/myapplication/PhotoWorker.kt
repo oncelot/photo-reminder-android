@@ -8,13 +8,14 @@ import java.time.LocalDate
 class PhotoWorker(appContext: Context, workerParams: WorkerParameters) : Worker(appContext, workerParams) {
 
     override fun doWork(): Result {
+        val service=Service();
         val contentResolver = applicationContext.contentResolver
         var today=LocalDate.now();
         val day = today.dayOfMonth // Puoi cambiare con il giorno corrente
         val month = today.monthValue// Puoi cambiare con il mese corrente
 
         // Ottieni le foto del giorno
-        val photos = getPhotosByDate(contentResolver, day, month)
+        val photos = service.getPhotosByDate(contentResolver, day, month)
 
         if (photos.isNotEmpty()) {
             // Prendi la prima foto e invia una notifica
