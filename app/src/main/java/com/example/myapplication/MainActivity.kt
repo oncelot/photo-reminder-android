@@ -23,6 +23,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -147,15 +148,17 @@ fun calculateInitialDelay(): Long {
 fun Greeting(contentResolver: ContentResolver) {
 
     val service= Service();
+    val servicePermission= ServicePermission();
     val today = LocalDate.now()
     var day by remember { mutableStateOf(today.dayOfMonth) }
     var month by remember { mutableStateOf(today.monthValue) }
     var photos by remember { mutableStateOf(listOf<PhotoData>()) }
     val serviceDialog = ServiceDialog();
+    var showSlideshow by remember { mutableStateOf(false) }
 
     var isDialogClosed by remember { mutableStateOf(false) }
 
-    if (!isDialogClosed) {
+    if (!isDialogClosed && !servicePermission.hasStoragePermission(LocalContext.current) ) {
         // Mostra il dialogo
         serviceDialog.DialogPreNotifiche(LocalContext.current) {
             // Quando il dialogo viene chiuso, aggiorniamo lo stato
@@ -235,23 +238,34 @@ fun Greeting(contentResolver: ContentResolver) {
             Text("${stringResource(R.string.selectData)}")
 
         }
+        //Button slideshow
+        Button(
+            onClick = {
+               showSlideshow=true;
+            },
+            modifier = Modifier.padding(bottom = 16.dp)
+        ) {
+            Text("play")
+
+        }
         //   Button(onClick = {photos = getPhotosByDate(contentResolver,day,month) }){ Text("Cerca foto") }
         LazyVerticalGrid(
-            columns = GridCells.Adaptive(100.dp),
+            columns = GridCells.Fixed(2),
             modifier = Modifier.fillMaxSize(),
 
             ) {
             items(photos.size) { index ->
                 Column(
-                    modifier = Modifier.padding(4.dp),
+                    modifier = Modifier.padding(2.dp).background(Color(0xFFebedef)),
                     verticalArrangement = Arrangement.Center
                 ) {
 
                     Image(
                         painter = rememberAsyncImagePainter(photos[index].uri),
                         contentDescription = null,
+                        alignment = Alignment.Center,
 
-                        modifier = Modifier.size(100.dp).padding(4.dp).clickable {
+                        modifier = Modifier.size(170.dp).padding(2.dp).clickable {
                             selectedPhotoIndex = index
                         } // Imposta la foto selezionata
                     )
@@ -327,8 +341,13 @@ fun Greeting(contentResolver: ContentResolver) {
                 }
             }
         }
-    }
 
+
+    }
+    if (showSlideshow) {
+        service.PhotoSlideshow(photos = photos,  onClose = { showSlideshow = false })
+
+    }
 
 }
 

@@ -3,6 +3,7 @@ package com.example.myapplication
 import android.content.ContentResolver
 import android.content.Context
 import android.database.Cursor
+import android.graphics.drawable.Icon
 import android.media.ExifInterface
 import android.net.Uri
 import android.os.Environment
@@ -14,8 +15,82 @@ import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
 import java.util.Locale
+import androidx.compose.animation.Crossfade
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Close
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.unit.dp
+import coil.compose.rememberAsyncImagePainter
+import kotlinx.coroutines.delay
 
 class Service {
+
+
+
+    @Composable
+    fun PhotoSlideshow(
+        photos: List<PhotoData>, // Lista di URI (o URL) delle foto
+        slideDuration: Long = 3000L, // Durata per ogni foto (in millisecondi)
+        onClose: () -> Unit // Callback per chiudere lo slideshow
+    ) {
+        // Stato per l'indice corrente della foto da visualizzare
+
+        var currentIndex by remember { mutableStateOf(0) }
+
+        // Avvia la coroutine che aggiorna l'indice ogni slideDuration millisecondi
+        LaunchedEffect(photos) {
+            while (true) {
+                delay(slideDuration)
+                currentIndex = (currentIndex + 1) % photos.size
+            }
+        }
+
+        // Mostra lo slideshow in un overlay a schermo intero
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color.Black),
+            contentAlignment = Alignment.Center
+        ) {
+            // Transizione Crossfade tra le immagini
+            Crossfade(targetState = currentIndex) { index ->
+                Image(
+                    painter = rememberAsyncImagePainter(photos[index].uri),
+                    contentDescription = "Foto in slideshow",
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Crop
+                )
+            }
+            // Bottone per chiudere lo slideshow, in alto a destra
+            IconButton(
+                onClick = onClose,
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(16.dp)
+            ) {
+                val MyAppIcons = Icons.Rounded
+
+                Icon(
+                    imageVector = MyAppIcons.Close,
+                    contentDescription = "Chiudi slideshow",
+                tint = Color.White
+            )
+
+            }
+        }
+    }
 
     fun getPhotosByDate(contentResolver: ContentResolver, day: Int, month: Int): List<PhotoData> {
 
