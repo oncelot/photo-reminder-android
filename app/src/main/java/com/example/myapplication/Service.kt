@@ -5,6 +5,7 @@ import android.content.Context
 import android.database.Cursor
 import android.graphics.drawable.Icon
 import android.media.ExifInterface
+import android.media.MediaPlayer
 import android.net.Uri
 import android.os.Environment
 import android.os.storage.StorageManager
@@ -34,6 +35,8 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import coil.compose.rememberAsyncImagePainter
 import kotlinx.coroutines.delay
+import androidx.compose.ui.platform.LocalContext
+
 
 class Service {
 
@@ -45,7 +48,19 @@ class Service {
         slideDuration: Long = 3000L, // Durata per ogni foto (in millisecondi)
         onClose: () -> Unit // Callback per chiudere lo slideshow
     ) {
+        val context = LocalContext.current
+
         // Stato per l'indice corrente della foto da visualizzare
+        DisposableEffect(Unit) {
+            // Assicurati di avere il file musicale in res/raw/background_music.mp3
+            val mediaPlayer = MediaPlayer.create(context, R.raw.background_music)
+            mediaPlayer.isLooping = true
+            mediaPlayer.start()
+            onDispose {
+                mediaPlayer.stop()
+                mediaPlayer.release()
+            }
+        }
 
         var currentIndex by remember { mutableStateOf(0) }
 
